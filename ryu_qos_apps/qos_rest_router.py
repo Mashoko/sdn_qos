@@ -1,19 +1,3 @@
-# Copyright (C) 2013 Nippon Telegraph and Telephone Corporation.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-# implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-
 import logging
 import numbers
 import socket
@@ -49,56 +33,6 @@ from ryu.ofproto import inet
 from ryu.ofproto import ofproto_v1_0
 from ryu.ofproto import ofproto_v1_2
 from ryu.ofproto import ofproto_v1_3
-
-
-# =============================
-#          REST API
-# =============================
-#
-#  Note: specify switch and vlan group, as follows.
-#   {switch_id} : 'all' or switchID
-#   {vlan_id}   : 'all' or vlanID
-#
-
-# 1. get address data and routing data.
-#
-# * get data of no vlan
-# GET /router/{switch_id}
-#
-# * get data of specific vlan group
-# GET /router/{switch_id}/{vlan_id}
-#
-
-# 2. set address data or routing data.
-#
-# * set data of no vlan
-# POST /router/{switch_id}
-#
-# * set data of specific vlan group
-# POST /router/{switch_id}/{vlan_id}
-#
-#  case1: set address data.
-#    parameter = {"address": "A.B.C.D/M"}
-#  case2-1: set static route.
-#    parameter = {"destination": "A.B.C.D/M", "gateway": "E.F.G.H"}
-#  case2-2: set default route.
-#    parameter = {"gateway": "E.F.G.H"}
-#
-
-# 3. delete address data or routing data.
-#
-# * delete data of no vlan
-# DELETE /router/{switch_id}
-#
-# * delete data of specific vlan group
-# DELETE /router/{switch_id}/{vlan_id}
-#
-#  case1: delete address data.
-#    parameter = {"address_id": "<int>"} or {"address_id": "all"}
-#  case2: delete routing data.
-#    parameter = {"route_id": "<int>"} or {"route_id": "all"}
-#
-#
 
 
 UINT16_MAX = 0xffff

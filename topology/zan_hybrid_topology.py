@@ -23,8 +23,8 @@ class ZanHybridTopo( Topo ):
         starlink_gw = self.addSwitch( 'edge_sat', dpid='3' )
         lte_edge = self.addSwitch( 'edge_lte', dpid='4' )
 
-        # Connect Edge gateways to the Core
-        # In Phase 3, we will use TCLink parameters here to simulate 
+        
+     
         # actual satellite latency/jitter for the starlink_gw link.
         self.addLink( core_sw, fiber_edge )
         self.addLink( core_sw, starlink_gw )

@@ -6,19 +6,6 @@ Enterprise networks are increasingly becoming larger and more dynamic due to vas
 
 The approach of this paper is an implementation of a software-based architecture in the topology of a data center. It manages and guarantees the quality of service, using network policy-oriented management and service quality methods. The presented framework is an expandable infrastructure to solve the challenge of dynamic and agile management in the network of data centers and virtualization and cloud processing service providers.
 
-## RYU architecture
-![alt_text](https://github.com/amirashoori7/sdn_qos/blob/f6d57c8d29c403a016fb196da2a3b59768ccbc3a/demo_results/ryu_arch.jpg)
-
-## Test Case 1 -Perflow QoS 
-![alt_text](https://github.com/amirashoori7/sdn_qos/blob/d6a423297848a2b4a2797cbabd6c4de2549bfbe5/demo_results/perflow%20results.jpg)
-
-## Test Case 2 -Diffserv QoS
-![alt_text](https://github.com/amirashoori7/sdn_qos/blob/d6a423297848a2b4a2797cbabd6c4de2549bfbe5/demo_results/diffserv%20results.jpg)
-
-## Further work: developing flow manager UI
-![alt_text](https://github.com/amirashoori7/sdn_qos/blob/6fc9763209a50fdb0faadc1187d42617a597dd90/demo_results/flowmgr.jpg)
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Getting started
 create python virtual environment

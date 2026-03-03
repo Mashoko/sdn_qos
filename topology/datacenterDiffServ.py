@@ -31,8 +31,23 @@ class DatacenterBasicTopo( Topo ):
         dpid = ( loc * 16 ) + 1
         switch = self.addSwitch( 's1r%s' % loc, dpid='%x' % dpid )
 
-        #for n in irange( 1, 4 ):
-        host = self.addHost( 'h%sr%s' % ( 1, loc ) )
+        # Assign IP and default route based on rack location
+        ip = ''
+        defaultRoute = ''
+        if loc == 1:
+            ip = '172.16.20.10/24'
+            defaultRoute = 'via 172.16.20.1'
+        elif loc == 2:
+            ip = '172.16.100.10/24'
+            defaultRoute = 'via 172.16.100.1'
+        elif loc == 3:
+            ip = '172.16.200.10/24'
+            defaultRoute = 'via 172.16.200.1'
+        elif loc == 4:
+            ip = '192.168.30.10/24'
+            defaultRoute = 'via 192.168.30.1'
+            
+        host = self.addHost( 'h%sr%s' % ( 1, loc ), ip=ip, defaultRoute=defaultRoute )
         self.addLink( switch, host )
 
         # Return list of top-of-rack switches for this rack

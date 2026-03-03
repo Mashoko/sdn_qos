@@ -1,8 +1,5 @@
 setting ovsdb_addr to access OVSDB...
-
- 0
-
- 0
+ b
 
  0
 setting the queue params...
