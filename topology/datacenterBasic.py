@@ -1,44 +1,44 @@
 """
-A simple datacenter topology script for Mininet.
-
-    [ s1 ]================================.
-      ,---'       |           |           |
-    [ s1r1 ]=.  [ s1r2 ]=.  [ s1r3 ]=.  [ s1r4 ]=.
-    [ h1r1 ]-|  [ h1r2 ]-|  [ h1r3 ]-|  [ h1r4 ]-|
-    [ h2r1 ]-|  [ h2r2 ]-|  [ h2r3 ]-|  [ h2r4 ]-|
-    [ h3r1 ]-|  [ h3r2 ]-|  [ h3r3 ]-|  [ h3r4 ]-|
-    [ h4r1 ]-'  [ h4r2 ]-'  [ h4r3 ]-'  [ h4r4 ]-'
+Scaled Enterprise Datacenter Topology for Mininet.
+Structure: Core -> Aggregation -> Top of Rack (ToR) -> Hosts
 """
 
 from mininet.topo import Topo
-from mininet.util import irange
+from mininet.link import TCLink
 
-class DatacenterBasicTopo( Topo ):
-    "Datacenter topology with 4 hosts per rack, 4 racks, and a root switch"
+class DatacenterScaledTopo(Topo):
+    "Massive Enterprise Datacenter Topology"
+    
+    def build(self, num_agg=2, racks_per_agg=5, hosts_per_rack=10):
+        self.dpid_counter = 1
+        def get_dpid():
+            dpid = f"{self.dpid_counter:x}"
+            self.dpid_counter += 1
+            return dpid
 
-    def build( self ):
-        self.racks = []
-        rootSwitch = self.addSwitch( 's1' )
-        for i in irange( 1, 4 ):
-            rack = self.buildRack( i )
-            self.racks.append( rack )
-            for switch in rack:
-                self.addLink( rootSwitch, switch )
+        # Add Core Switch
+        core = self.addSwitch('core1', dpid=get_dpid())
 
-    def buildRack( self, loc ):
-        "Build a rack of hosts with a top-of-rack switch"
+        # Add Aggregation Switches
+        for a in range(1, num_agg + 1):
+            agg = self.addSwitch(f'agg{a}', dpid=get_dpid())
+            # 100 Mbps link between Core and Aggregation
+            self.addLink(core, agg, cls=TCLink, bw=100)
 
-        dpid = ( loc * 16 ) + 1
-        switch = self.addSwitch( 's1r%s' % loc, dpid='%x' % dpid )
+            # Add Top of Rack (ToR) Switches for each Aggregation Switch
+            for r in range(1, racks_per_agg + 1):
+                tor = self.addSwitch(f'tor{a}_{r}', dpid=get_dpid())
+                # 50 Mbps link between Aggregation and ToR (Congestion point)
+                self.addLink(agg, tor, cls=TCLink, bw=50)
 
-        for n in irange( 1, 4 ):
-            host = self.addHost( 'h%sr%s' % ( n, loc ) )
-            self.addLink( switch, host )
+                # Add Hosts for each ToR Switch
+                for h in range(1, hosts_per_rack + 1):
+                    # Host naming: h_<agg>_<rack>_<host>
+                    host = self.addHost(f'h_{a}_{r}_{h}')
+                    # 10 Mbps link between ToR and Host
+                    self.addLink(tor, host, cls=TCLink, bw=10)
 
-        # Return list of top-of-rack switches for this rack
-        return [switch]
-
-# Allows the file to be imported using `mn --custom <filename> --topo dcbasic`
+# Allows the file to be imported using `mn --custom <filename> --topo datacenter_scaled`
 topos = {
-    'dcbasic': DatacenterBasicTopo
+    'datacenter_scaled': (lambda: DatacenterScaledTopo())
 }

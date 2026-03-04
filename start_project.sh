@@ -30,10 +30,10 @@ pkill -f ryu-manager > /dev/null 2>&1
 echo ""
 echo "[2/4] Starting Ryu controller..."
 # Start the controller in the background
-"$ZAN_DIR/venv/bin/ryu-manager" ryu_qos_apps/qos_rest_router.py \
-            ryu_qos_apps/qos_simple_switch_13.py \
+"$ZAN_DIR/venv/bin/ryu-manager" ryu_qos_apps/qos_simple_switch_13.py \
             ryu_qos_apps/rest_conf_switch.py \
             ryu_qos_apps/rest_qos.py \
+            flowmanager/flowmanager.py \
             > ryu.log 2>&1 &
 RYU_PID=$!
 echo "Ryu controller started with PID: $RYU_PID. Logging to ryu.log"
@@ -48,14 +48,17 @@ echo "[3/4] Preparing background configuration script..."
     echo "  [.] Waiting 15 seconds for Mininet and Ryu to initialize before applying configs..."
     sleep 15
     
-    echo "  [.] Applying IP settings to routers..."
-    bash scripts/router_set_ip.sh > /dev/null 2>&1
-
-    echo "  [.] Applying routing settings..."
-    bash scripts/route_setting.sh > /dev/null 2>&1
-
-    echo "  [.] Applying DiffServ QoS settings..."
+    echo "  [.] Ignoring old hardcoded 4-host IP & Routing settings for massive topology..."
+    # bash scripts/router_set_ip.sh > /dev/null 2>&1
+    # bash scripts/route_setting.sh > /dev/null 2>&1
     # bash scripts/diffserv_qos_script.sh > /dev/null 2>&1
+
+    echo "  [.] Applying Automated QoS limits for massive scales..."
+    ./zan_massive_qos.sh > /dev/null 2>&1
+    echo "  [.] Starting Python Telemetry Collector..."
+    # Run the collector in the background, logging to collector.log
+    "$ZAN_DIR/venv/bin/python" "$ZAN_DIR/zan_telemetry_collector.py" > "$ZAN_DIR/collector.log" 2>&1 &
+    COLLECTOR_PID=$!
     
     echo "  [✓] All configurations applied successfully!"
     echo "  >>> Press Enter in the mininet CLI to continue..."
@@ -64,14 +67,14 @@ echo "[3/4] Preparing background configuration script..."
 
 echo ""
 echo "[4/4] Starting Mininet topology..."
-echo "  Topology: datacenterDiffServ.py (dcbasic)"
+echo "  Topology: zan_hybrid_topology.py (zan_hybrid_scaled)"
 echo "-----------------------------------------------------"
 echo ""
 
 # Start Mininet. This command will block and give the user the mininet> prompt.
 # We set the controller to remote since Ryu is running in the background.
-mn --custom topology/datacenterDiffServ.py \
-   --topo dcbasic \
+mn --custom topology/zan_hybrid_topology.py \
+   --topo zan_hybrid_scaled \
    --mac \
    --controller remote,ip=127.0.0.1,port=6633 \
    --switch ovsk,protocols=OpenFlow13 \
@@ -83,6 +86,7 @@ echo "Mininet exited. Cleaning up remaining processes..."
 
 # When the user types 'quit' in mininet, cleanup is performed
 pkill -P $$ -f ryu-manager
+pkill -f "python.*zan_telemetry_collector.py"
 kill "$RYU_PID" 2>/dev/null
 
 echo "ZAN SDN Project Testbed stopped cleanly."
