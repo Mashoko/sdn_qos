@@ -43,49 +43,66 @@ sudo mnexec -a $PID_RX iperf3 -s -p 5060 -1 > /tmp/${HOST_RX}_prioritized_server
 sudo mnexec -a $PID_RX iperf3 -s -p 5004 -1 > /tmp/${HOST_RX}_unprioritized_server.log 2>&1 &
 
 echo "[2/3] Starting aggressive 30Mbps background congestion from $HOST_CONG..."
-sudo mnexec -a $PID_CONG iperf3 -c $RX_IP -u -b 30M -p 5001 -t 310 > /tmp/${HOST_CONG}_congestion.log 2>&1 &
+sudo mnexec -a $PID_CONG iperf3 -c $RX_IP -u -b 30M -p 5001 -t 0 > /tmp/${HOST_CONG}_congestion.log 2>&1 &
 sleep 3
 
 echo "[3/3] Launching simultaneous prioritized/unprioritized traffic from $HOST_TEST..."
 # Prioritized (Port 5060) - 200Kbps
-sudo mnexec -a $PID_TEST iperf3 -c $RX_IP -u -b 200k -p 5060 -t 300 > /tmp/${HOST_TEST}_prioritized_client.log 2>&1 &
+sudo mnexec -a $PID_TEST iperf3 -c $RX_IP -u -b 200k -p 5060 -t 0 > /tmp/${HOST_TEST}_prioritized_client.log 2>&1 &
 PID_PRIO=$!
 
 # Unprioritized (Port 5004) - 200Kbps
-sudo mnexec -a $PID_TEST iperf3 -c $RX_IP -u -b 200k -p 5004 -t 300 > /tmp/${HOST_TEST}_unprioritized_client.log 2>&1 &
+sudo mnexec -a $PID_TEST iperf3 -c $RX_IP -u -b 200k -p 5004 -t 0 > /tmp/${HOST_TEST}_unprioritized_client.log 2>&1 &
 PID_UNPRIO=$!
 
-echo "  -> Tests are running for 5 minutes! Streaming live logs below..."
-echo "  (Press Ctrl+C to stop early, but keep in mind Mininet will need manual cleanup)"
+echo "  -> Tests are running continuously! Streaming live logs below..."
+echo "  (Press Ctrl+C to stop, wait will block until terminated)"
 echo ""
+
+cleanup() {
+    echo ""
+    echo "Caught Ctrl+C! Stopping continuous tests and waiting for final logs..."
+    
+    # Send SIGTERM to iperf clients
+    kill $PID_PRIO 2>/dev/null
+    kill $PID_UNPRIO 2>/dev/null
+    kill $TAIL_PID 2>/dev/null
+    
+    # Wait a moment for final reports to flush
+    sleep 3
+
+    echo ""
+    echo "=========================================================="
+    echo "               RESULTS (SERVER RECEIVE LOGS)              "
+    echo "                 (Traffic reaching $HOST_RX)                  "
+    echo "=========================================================="
+    echo ""
+    echo ">>> UNPRIORITIZED STREAM (Control - Port 5004) <<<"
+    cat /tmp/${HOST_TEST}_unprioritized_client.log | grep -A 5 "Server Report:" | head -n 6 || tail -n 6 /tmp/${HOST_RX}_unprioritized_server.log
+
+    echo ""
+    echo ">>> PRIORITIZED STREAM (QoS Active - Port 5060) <<<"
+    cat /tmp/${HOST_TEST}_prioritized_client.log | grep -A 5 "Server Report:" | head -n 6 || tail -n 6 /tmp/${HOST_RX}_prioritized_server.log
+
+
+    echo ""
+    echo "Cleaning up leftover mininet processes..."
+    sudo pkill -f "iperf.*5001"
+    sudo pkill -f "iperf.*5060"
+    sudo pkill -f "iperf.*5004"
+    echo "Done!"
+    exit 0
+}
+
+trap 'cleanup' SIGINT SIGTERM
 
 # Tail the logs in the background so the user can watch the stream
 tail -f /tmp/${HOST_TEST}_prioritized_client.log /tmp/${HOST_TEST}_unprioritized_client.log &
 TAIL_PID=$!
 
+# Block script indefinitely until user presses Ctrl+C
 wait $PID_PRIO
 wait $PID_UNPRIO
 
-# Stop tailing when the tests finish
-kill $TAIL_PID 2>/dev/null
-
-sleep 15 # Wait for servers to timeout dropped ACKs and print their final logs
-
-echo ""
-echo "=========================================================="
-echo "               RESULTS (SERVER RECEIVE LOGS)              "
-echo "                 (Traffic reaching $HOST_RX)                  "
-echo "=========================================================="
-echo ""
-echo ">>> UNPRIORITIZED STREAM (Control - Port 5004) <<<"
-cat /tmp/${HOST_TEST}_unprioritized_client.log | grep -A 5 "Server Report:" | head -n 6 || tail -n 6 /tmp/${HOST_RX}_unprioritized_server.log
-
-echo ""
-echo ">>> PRIORITIZED STREAM (QoS Active - Port 5060) <<<"
-cat /tmp/${HOST_TEST}_prioritized_client.log | grep -A 5 "Server Report:" | head -n 6 || tail -n 6 /tmp/${HOST_RX}_prioritized_server.log
-
-
-echo ""
-echo "Cleaning up..."
-sudo pkill -f iperf
-echo "Done!"
+# If for some reason wait completes without trap (which shouldn't happen with -t 0)
+cleanup

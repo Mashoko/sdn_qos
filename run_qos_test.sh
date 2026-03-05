@@ -47,5 +47,6 @@ echo "------------------------------------------------"
 
 # Clean up iperf processes
 echo "Cleaning up background iperf processes..."
-sudo pkill -f iperf
+sudo pkill -f "iperf.*5001"
+sudo pkill -f "iperf.*5060"
 echo "Done!"

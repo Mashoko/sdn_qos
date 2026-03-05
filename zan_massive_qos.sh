@@ -25,10 +25,10 @@ if [ -n "$SAT_DPID" ]; then
     curl -s -X POST -d '{
         "port_name": "s3_sat-eth2", 
         "type": "linux-htb", 
-        "max_rate": "20000000", 
+        "max_rate": "5000000", 
         "queues": [
-            {"max_rate": "10000000"}, 
-            {"min_rate": "10000000", "max_rate": "20000000"}
+            {"max_rate": "3000000"}, 
+            {"min_rate": "2000000", "max_rate": "5000000"}
         ]
     }' $CONTROLLER/qos/queue/$SAT_DPID
     

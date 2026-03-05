@@ -57,7 +57,7 @@ echo "[3/4] Preparing background configuration script..."
     ./zan_massive_qos.sh > /dev/null 2>&1
     echo "  [.] Starting Python Telemetry Collector..."
     # Run the collector in the background, logging to collector.log
-    "$ZAN_DIR/venv/bin/python" "$ZAN_DIR/zan_telemetry_collector.py" > "$ZAN_DIR/collector.log" 2>&1 &
+    sudo "$ZAN_DIR/venv/bin/python" "$ZAN_DIR/zan_telemetry_collector.py" > "$ZAN_DIR/collector.log" 2>&1 &
     COLLECTOR_PID=$!
     
     echo "  [✓] All configurations applied successfully!"
