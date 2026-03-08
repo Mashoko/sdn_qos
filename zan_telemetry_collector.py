@@ -1,12 +1,19 @@
 import subprocess
 import json
 import time
+from datetime import datetime, timezone
+from concurrent.futures import ThreadPoolExecutor
 from influxdb import InfluxDBClient
 
 # Connect to local InfluxDB
 client = InfluxDBClient(host='localhost', port=8086)
 client.create_database('zan_qos_metrics')
 client.switch_database('zan_qos_metrics')
+
+# Shorter iperf test = more points per minute = smoother Grafana
+IPERF_DURATION_SEC = 1
+# How often to run the full cycle (both streams)
+POLL_INTERVAL_SEC = 2
 
 def ensure_qos_rule_applied(port):
     try:
@@ -62,49 +69,46 @@ def start_iperf_server(pid, port):
         print(f"Error starting iperf3 server on port {port}: {result.stderr}")
 
 def run_iperf_and_log(client_pid, target_ip, port, stream_type):
-    # Run iperf3 in client mode via Mininet's mnexec
-    cmd = f"sudo mnexec -a {client_pid} iperf3 -c {target_ip} -u -p {port} -b 200K -t 2 -J"
+    # Shorter test = more frequent points = smoother Grafana
+    cmd = f"sudo mnexec -a {client_pid} iperf3 -c {target_ip} -u -p {port} -b 200K -t {IPERF_DURATION_SEC} -J"
     
     try:
-        result = subprocess.run(cmd.split(), capture_output=True, text=True)
+        result = subprocess.run(cmd.split(), capture_output=True, text=True, timeout=IPERF_DURATION_SEC + 5)
         data = json.loads(result.stdout)
         
-        # Extract Jitter, Bandwidth, and Packet Loss from the JSON output
         jitter_ms = data['end']['sum_received']['jitter_ms']
         bandwidth_bps = data['end']['sum_received']['bits_per_second']
         packet_loss = data['end']['sum_received']['lost_percent']
         
-        # Format for InfluxDB - writing to both measurements your Grafana expects
+        # Explicit timestamp for aligned, smooth time series in Grafana
+        now_ns = int(datetime.now(timezone.utc).timestamp() * 1e9)
+        
         json_body = [
             {
                 "measurement": "network_jitter",
-                "tags": {
-                    "stream_type": stream_type,
-                    "port": str(port)
-                },
-                "fields": {
-                    "value": float(jitter_ms)
-                }
+                "tags": {"stream_type": stream_type, "port": str(port)},
+                "time": now_ns,
+                "fields": {"value": float(jitter_ms)}
             },
             {
                 "measurement": "network_metrics",
-                "tags": {
-                    "stream_type": stream_type,
-                    "port": str(port)
-                },
+                "tags": {"stream_type": stream_type, "port": str(port)},
+                "time": now_ns,
                 "fields": {
                     "bandwidth_bps": float(bandwidth_bps),
                     "packet_loss_percent": float(packet_loss)
                 }
             }
         ]
-        client.write_points(json_body)
+        client.write_points(json_body, time_precision='n')
         print(f"Logged {stream_type} - Jitter: {jitter_ms}ms, BW: {bandwidth_bps}bps, Loss: {packet_loss}%")
         
     except json.JSONDecodeError:
         print(f"Error: Could not parse iperf3 JSON output for port {port}. Server busy or not running?")
     except KeyError:
         print(f"Error: Metric data not found in iperf3 output for port {port}.")
+    except subprocess.TimeoutExpired:
+        print(f"Error: iperf3 timed out for port {port}.")
     except Exception as e:
         print(f"Error collecting data for port {port}: {e}")
 
@@ -144,10 +148,10 @@ if __name__ == '__main__':
     # Ensure port 5061 gets QoS priority
     ensure_qos_rule_applied(5061)
     
+    # Run both streams in parallel so Grafana gets aligned points every POLL_INTERVAL_SEC
     while True:
-        # Port 5061 serves as the Prioritized telemetry testing port
-        run_iperf_and_log(client_pid, server_ip, 5061, "Prioritized")
-        # Port 5015 serves as the Unprioritized telemetry testing port
-        run_iperf_and_log(client_pid, server_ip, 5015, "Unprioritized")
-        time.sleep(1) # Poll every 1 second
+        with ThreadPoolExecutor(max_workers=2) as ex:
+            ex.submit(run_iperf_and_log, client_pid, server_ip, 5061, "Prioritized")
+            ex.submit(run_iperf_and_log, client_pid, server_ip, 5015, "Unprioritized")
+        time.sleep(POLL_INTERVAL_SEC)
 

@@ -16,8 +16,8 @@ if [ "$EUID" -ne 0 ]; then
   exit
 fi
 
-ZAN_DIR="/home/user/Documents/ZAN"
-cd "$ZAN_DIR" || exit
+ZAN_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$ZAN_DIR" || exit 1
 
 echo ""
 echo "[1/4] Cleaning up previous Mininet and Ryu instances..."
@@ -29,8 +29,30 @@ pkill -f ryu-manager > /dev/null 2>&1
 
 echo ""
 echo "[2/4] Starting Ryu controller..."
+
+RYU_PYTHON="$ZAN_DIR/venv/bin/python"
+if [ ! -x "$RYU_PYTHON" ]; then
+  echo "Python venv not found at $RYU_PYTHON. Please (re)create the venv and install dependencies."
+  exit 1
+fi
+
+# Prefer the local Ryu source tree under $ZAN_DIR/ryu.
+if [ -d "$ZAN_DIR/ryu/ryu" ]; then
+  export PYTHONPATH="$ZAN_DIR/ryu${PYTHONPATH:+:$PYTHONPATH}"
+  RYU_CMD=( "$RYU_PYTHON" -m ryu.cmd.manager )
+else
+  # Fallback to any ryu-manager on PATH if available.
+  if command -v ryu-manager >/dev/null 2>&1; then
+    RYU_CMD=( ryu-manager )
+  else
+    echo "No local Ryu source at '$ZAN_DIR/ryu' and no 'ryu-manager' found on PATH."
+    echo "Please clone https://github.com/faucetsdn/ryu into '$ZAN_DIR/ryu' and install its Python dependencies."
+    exit 1
+  fi
+fi
+
 # Start the controller in the background
-"$ZAN_DIR/venv/bin/ryu-manager" ryu_qos_apps/qos_simple_switch_13.py \
+"${RYU_CMD[@]}" ryu_qos_apps/qos_simple_switch_13.py \
             ryu_qos_apps/rest_conf_switch.py \
             ryu_qos_apps/rest_qos.py \
             flowmanager/flowmanager.py \

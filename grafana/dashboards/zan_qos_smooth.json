@@ -1,0 +1,100 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": { "type": "influxdb", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": { "unit": "ms", "custom": {} },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "id": 1,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        {
+          "datasource": { "type": "influxdb", "uid": "${datasource}" },
+          "query": "SELECT mean(\"value\") AS \"jitter_ms\" FROM \"network_jitter\" WHERE $timeFilter GROUP BY time(5s), \"stream_type\" fill(previous)",
+          "rawQuery": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Jitter (ms) by stream type",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": { "unit": "bps", "custom": {} },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "id": 2,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        {
+          "datasource": { "type": "influxdb", "uid": "${datasource}" },
+          "query": "SELECT mean(\"bandwidth_bps\") AS \"bandwidth_bps\" FROM \"network_metrics\" WHERE $timeFilter GROUP BY time(5s), \"stream_type\" fill(previous)",
+          "rawQuery": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Bandwidth (bps) by stream type",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": { "unit": "percent", "custom": {} },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "id": 3,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        {
+          "datasource": { "type": "influxdb", "uid": "${datasource}" },
+          "query": "SELECT mean(\"packet_loss_percent\") AS \"packet_loss_percent\" FROM \"network_metrics\" WHERE $timeFilter GROUP BY time(5s), \"stream_type\" fill(previous)",
+          "rawQuery": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Packet loss (%) by stream type",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["zan", "qos"],
+  "templating": {
+    "list": [
+      {
+        "current": { "selected": true, "text": "InfluxDB", "value": "InfluxDB" },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Data source",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "influxdb",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource",
+        "datasource": { "type": "influxdb", "uid": "influxdb" }
+      }
+    ]
+  },
+  "time": { "from": "now-15m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "ZAN QoS metrics (smooth)",
+  "uid": "zan-qos-smooth",
+  "version": 1
+}
